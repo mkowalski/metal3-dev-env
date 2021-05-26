@@ -85,6 +85,15 @@
         uri: "{{ libvirt_uri }}"
       with_items: "{{ vm_nodes }}"
 
+    # Check if extradisks_list contains only entries in the form of vdX.
+    # This is because extra drives are mounted as VirtIO so we don't want
+    # to mix vdX and sdX conventions.
+
+    - name: Fail if non-vdX extra disks detected
+      fail:
+        msg: "Extra disks should use only vdX names."
+      when: "{{ extradisks_list | select('match', '^(?!vd)[a-z]+') | list | length > 0 }}"
+
     # Create additional blockdevices for each objectstorage flavor node
     # These are sparse files, not using space if unused
     - name: Create additional blockdevice for objectstorage nodes
@@ -118,7 +127,7 @@
         virsh domuuid "{{ item.name }}"
       register: vm_uuid
       with_items: "{{ vm_nodes }}"
-    
+
     - name: set_fact
       set_fact:
         vm_id: "{{ vm_id|default({}) | combine ( {item.item.name: item.stdout} ) }}"
